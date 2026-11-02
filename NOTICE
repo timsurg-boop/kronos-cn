@@ -1,0 +1,37 @@
+Kronos Workbench
+================
+
+This project is a data / visualization / evaluation workbench built around the
+Kronos K-line foundation model.
+
+Upstream
+--------
+
+Kronos
+  https://github.com/shiyu-coder/Kronos
+  MIT License, Copyright (c) 2025 ShiYu
+
+This repository does not vendor the upstream model code or weights. Users
+install them separately and point `KRONOS_UPSTREAM` / `KRONOS_MODEL_DIR` at
+their checkout.
+
+Third-party libraries
+---------------------
+
+pandas, numpy, matplotlib — BSD-3-Clause style licenses.
+akshare — MIT (optional, for data fetching).
+tushare — Apache-2.0 (optional, for data fetching).
+torch, einops, huggingface_hub, safetensors — BSD/Apache/MIT (optional, for
+inference).
+
+Data
+----
+
+`examples/data/*.csv` contains trimmed historical OHLCV bars used only for
+layout demos and tests. Market data is provided by public sources and is not
+redistributed in full. No personal or account data is included.
+
+Disclaimer
+----------
+
+This software is for research and education. Nothing here is investment advice.

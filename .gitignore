@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local config & secrets
+.env
+.env.*
+!.env.example
+
+# Generated data / outputs
+data/
+!examples/data/
+!examples/data/*.csv
+charts/
+logs/
+output/
+*.lock
+*.log
+
+# Model weights (download from Hugging Face)
+models/
+NeoQuasar/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated demo output
+examples/heatmap.html
