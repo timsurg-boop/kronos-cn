@@ -79,6 +79,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--model-dir")
     p_eval.add_argument("--out-dir")
 
+    p_chart = sub.add_parser("chart", help="render a daily/weekly/monthly candlestick chart")
+    p_chart.add_argument("code")
+    p_chart.add_argument("--period", nargs="+", default=["D", "W", "M"], choices=["D", "W", "M"])
+    _add_data_dir(p_chart)
+    p_chart.add_argument("--out", help="output PNG path")
+    p_chart.add_argument("--bars", type=int, help="bars per panel (default 180/120/60)")
+    p_chart.add_argument("--no-open", dest="open_browser", action="store_false", default=True)
+
     p_demo = sub.add_parser("demo", help="render a heatmap from the bundled sample data")
     p_demo.add_argument("--data-dir", help="default: ./examples/data")
     p_demo.add_argument("--out", default="heatmap.html")
@@ -225,6 +233,32 @@ def cmd_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_chart(args: argparse.Namespace) -> int:
+    from kronos_cn.data.validate import load_frame
+    from kronos_cn.kline import plot_kline_grid
+
+    settings = Settings.load().with_data_dir(args.data_dir).ensure_dirs()
+    code = normalize_code(args.code)
+    path = settings.data_csv(code)
+    if not path.exists():
+        print(f"❌ no data for {code} at {path}")
+        return 1
+
+    periods = tuple(dict.fromkeys(args.period))
+    bars = {period: args.bars for period in periods} if args.bars else None
+    out = Path(args.out).expanduser() if args.out else settings.chart_png(code, "kline_" + "".join(periods))
+    frame = load_frame(path)
+    try:
+        saved = plot_kline_grid(frame, code, out, periods=periods, bars=bars)
+    except ValueError as exc:
+        print(f"❌ {exc}")
+        return 1
+    print(f"✅ {saved}")
+    if args.open_browser:
+        webbrowser.open(saved.resolve().as_uri())
+    return 0
+
+
 def cmd_demo(args: argparse.Namespace) -> int:
     data_dir = _resolve_demo_dir(args.data_dir)
     out = Path(args.out).expanduser()
@@ -259,6 +293,7 @@ COMMANDS = {
     "fetch": cmd_fetch,
     "predict": cmd_predict,
     "eval": cmd_eval,
+    "chart": cmd_chart,
     "demo": cmd_demo,
     "names": cmd_names,
 }

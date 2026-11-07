@@ -28,3 +28,25 @@ def test_heatmap_explicit(tmp_path):
     html = out.read_text(encoding="utf-8")
     assert 'id="grid-mo"' in html
     assert "selected" in html
+
+
+def test_chart_writes_png(tmp_path):
+    out = tmp_path / "600519.png"
+    code = main(
+        [
+            "chart",
+            "600519",
+            "--period",
+            "D",
+            "W",
+            "M",
+            "--data-dir",
+            str(SAMPLES),
+            "--out",
+            str(out),
+            "--no-open",
+        ]
+    )
+    assert code == 0
+    assert out.exists()
+    assert out.stat().st_size > 20_000

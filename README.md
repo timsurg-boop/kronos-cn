@@ -66,6 +66,7 @@ kronos-cn heatmap --open          # 出图
 | `kronos-cn demo` | 用 `examples/data` 生成样例云图 |
 | `kronos-cn validate` | 数据质量体检 |
 | `kronos-cn heatmap` | 生成市场云图（`--metric wk/mo/qtd/ytd`，`--scheme cn/intl`） |
+| `kronos-cn chart CODE` | 生成日/周/月 K 线三联图（`--period D W M`，默认自动打开） |
 | `kronos-cn dividend` | 用红利表生成红利热力图 |
 | `kronos-cn fetch CODE` | 抓取单只标的（Akshare 优先，Tushare 兜底） |
 | `kronos-cn predict CODE --plot` | 调用 Kronos 预测并画图（需要权重） |
@@ -91,6 +92,20 @@ date,open,high,low,close,volume,amount
 4. 周末数据只应出现在加密标的，`validate` 会单独标注。
 
 明细见 [docs/data-format.md](docs/data-format.md)。
+
+### K 线三联图
+
+```bash
+kronos-cn chart 600519 --period D W M
+```
+
+一张 PNG 里纵向排三组：日K、周K、月K。每组上方是蜡烛图与 MA5/MA10/MA20，下方是成交量；默认显示 180 / 120 / 60 根，可用 `--bars` 覆盖。红涨绿跌，数据直接来自本地 CSV，不联网。
+
+默认从 `$KRONOS_DATA_DIR` 读数据、写到 `$KRONOS_OUTPUT_DIR/charts/`，也可以临时指定：
+
+```bash
+kronos-cn chart 600519 --period D W M --data-dir ~/Desktop/Kronos --out /tmp/600519.png
+```
 
 ## 预测与评测
 
@@ -123,6 +138,7 @@ kronos-cn/
 │   ├── data/               # 抓取、归一、聚合、体检
 │   ├── heatmap/            # 市场云图、红利热力图、配色
 │   ├── evaluation/         # 纯指标 + 回测执行器
+│   ├── kline.py            # 日/周/月 K 线三联图
 │   ├── predict.py          # Kronos 推理封装
 │   └── plot.py             # 预测图
 ├── examples/data/          # 31 个标的的脱敏样例
