@@ -149,12 +149,26 @@ def cmd_dividend(args: argparse.Namespace) -> int:
     return 0
 
 
-def _fetch_one(code: str, settings, target_dir: Path, args: argparse.Namespace) -> tuple[bool, str]:
+def _canonical_symbol(code: str) -> str:
+    """Map cache file names like ``spy`` or ``DIA-usa`` to fetchable tickers."""
+    symbol = code.strip().upper().replace("-USA", "USA")
+    if symbol.isalpha() and len(symbol) <= 6 and not symbol.endswith("USA"):
+        symbol += "USA"
+    return symbol
+
+
+def _fetch_one(
+    code: str,
+    settings,
+    target_dir: Path,
+    args: argparse.Namespace,
+    save_as: str | None = None,
+) -> tuple[bool, str]:
     import pandas as pd
 
     from kronos_cn.data.fetch import FetchError, fetch
 
-    target = target_dir / f"{code}_kronos.csv"
+    target = target_dir / f"{save_as or code}_kronos.csv"
     start = args.start
     if target.exists():
         try:
@@ -191,7 +205,8 @@ def cmd_fetch(args: argparse.Namespace) -> int:
             return 1
         ok = failed = 0
         for index, code in enumerate(codes, start=1):
-            good, message = _fetch_one(code, settings, target_dir, args)
+            symbol = _canonical_symbol(code)
+            good, message = _fetch_one(symbol, settings, target_dir, args, save_as=code)
             print(f"[{index}/{len(codes)}] {'✅' if good else '❌'} {message}", flush=True)
             ok += good
             failed += not good
