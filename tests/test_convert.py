@@ -44,6 +44,24 @@ def test_normalize_requires_columns():
         normalize(pd.DataFrame({"date": ["2024-01-02"], "close": [1]}))
 
 
+def test_normalize_keeps_single_amount_when_turnover_present():
+    raw = pd.DataFrame(
+        {
+            "date": ["2024-01-02"],
+            "open": [1],
+            "high": [1],
+            "low": [1],
+            "close": [1],
+            "volume": [1],
+            "amount": [10.0],
+            "turnover": [0.01],
+        }
+    )
+    out = normalize(raw)
+    assert out.columns.tolist() == ["date", "open", "high", "low", "close", "volume", "amount"]
+    assert out["amount"].iloc[0] == 10.0
+
+
 def test_weekly_aggregation():
     dates = pd.date_range("2024-01-01", periods=7, freq="B")
     frame = pd.DataFrame(

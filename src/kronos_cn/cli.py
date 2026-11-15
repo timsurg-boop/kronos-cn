@@ -44,8 +44,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_dividend.add_argument("--title", default="A50 稳定红利热力图")
     p_dividend.add_argument("--open", action="store_true")
 
-    p_fetch = sub.add_parser("fetch", help="download one symbol")
-    p_fetch.add_argument("code")
+    p_fetch = sub.add_parser("fetch", help="download one symbol, or refresh every cached symbol")
+    p_fetch.add_argument("code", nargs="?")
+    p_fetch.add_argument("--all", action="store_true", dest="fetch_all", help="refresh every *_kronos.csv in the target directory")
+    p_fetch.add_argument("--limit", type=int, help="max symbols when using --all")
     p_fetch.add_argument("--start", default="2018-01-01")
     p_fetch.add_argument("--end")
     p_fetch.add_argument("--freq", default="D", choices=["D", "W"])
@@ -86,6 +88,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_chart.add_argument("--out", help="output PNG path")
     p_chart.add_argument("--bars", type=int, help="bars per panel (default 180/120/60)")
     p_chart.add_argument("--no-open", dest="open_browser", action="store_false", default=True)
+
+    p_doctor = sub.add_parser("doctor", help="report stale, short or broken data files")
+    _add_data_dir(p_doctor)
+    p_doctor.add_argument("--max-stale-days", type=int, default=10)
+    p_doctor.add_argument("--min-rows", type=int, default=25)
+    p_doctor.add_argument("--json", action="store_true", help="machine-readable output")
 
     p_demo = sub.add_parser("demo", help="render a heatmap from the bundled sample data")
     p_demo.add_argument("--data-dir", help="default: ./examples/data")
@@ -141,24 +149,61 @@ def cmd_dividend(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_fetch(args: argparse.Namespace) -> int:
+def _fetch_one(code: str, settings, target_dir: Path, args: argparse.Namespace) -> tuple[bool, str]:
+    import pandas as pd
+
     from kronos_cn.data.fetch import FetchError, fetch
 
+    target = target_dir / f"{code}_kronos.csv"
+    start = args.start
+    if target.exists():
+        try:
+            first = str(pd.read_csv(target, usecols=["date"])["date"].iloc[0])[:10]
+            if first < start:
+                start = first
+        except Exception:  # noqa: BLE001 - a corrupt cache should not block refresh
+            pass
+
+    try:
+        result = fetch(code, start=start, end=args.end, freq=args.freq, settings=settings)
+        frame = normalize_frame(result.frame)
+    except FetchError as exc:
+        return False, f"{code}: {exc}"
+    except Exception as exc:  # noqa: BLE001 - keep the batch running
+        return False, f"{code}: {type(exc).__name__}: {exc}"
+
+    frame.to_csv(target, index=False)
+    first, last = frame["date"].iloc[0].date(), frame["date"].iloc[-1].date()
+    return True, f"{code}: {len(frame)} 行 ({first} ~ {last}) via {result.source}"
+
+
+def cmd_fetch(args: argparse.Namespace) -> int:
     settings = Settings.load().ensure_dirs()
     target_dir = Path(args.out).expanduser() if args.out else settings.data_dir
     target_dir.mkdir(parents=True, exist_ok=True)
-    code = normalize_code(args.code)
-    try:
-        result = fetch(code, start=args.start, end=args.end, freq=args.freq, settings=settings)
-    except FetchError as exc:
-        print(f"❌ {exc}")
-        return 1
-    frame = normalize_frame(result.frame)
-    target = target_dir / f"{code}_kronos.csv"
-    frame.to_csv(target, index=False)
-    first, last = frame["date"].iloc[0].date(), frame["date"].iloc[-1].date()
-    print(f"✅ {code}: {len(frame)} 行 ({first} ~ {last}) via {result.source}\n   {target}")
-    return 0
+
+    if args.fetch_all:
+        codes = sorted(path.name.replace("_kronos.csv", "") for path in target_dir.glob("*_kronos.csv"))
+        if args.limit:
+            codes = codes[: args.limit]
+        if not codes:
+            print(f"❌ no *_kronos.csv under {target_dir}")
+            return 1
+        ok = failed = 0
+        for index, code in enumerate(codes, start=1):
+            good, message = _fetch_one(code, settings, target_dir, args)
+            print(f"[{index}/{len(codes)}] {'✅' if good else '❌'} {message}", flush=True)
+            ok += good
+            failed += not good
+        print(f"done: {ok} ok, {failed} failed")
+        return 0 if failed == 0 else 1
+
+    if not args.code:
+        print("❌ pass a CODE or use --all")
+        return 2
+    good, message = _fetch_one(normalize_code(args.code), settings, target_dir, args)
+    print(f"{'✅' if good else '❌'} {message}")
+    return 0 if good else 1
 
 
 def cmd_predict(args: argparse.Namespace) -> int:
@@ -259,6 +304,24 @@ def cmd_chart(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    from kronos_cn.doctor import run_doctor
+
+    settings = Settings.load().with_data_dir(args.data_dir)
+    try:
+        code, text = run_doctor(
+            settings.data_dir,
+            min_rows=args.min_rows,
+            max_stale_days=args.max_stale_days,
+            as_json=args.json,
+        )
+    except FileNotFoundError as exc:
+        print(f"❌ {exc}")
+        return 1
+    print(text)
+    return code
+
+
 def cmd_demo(args: argparse.Namespace) -> int:
     data_dir = _resolve_demo_dir(args.data_dir)
     out = Path(args.out).expanduser()
@@ -294,6 +357,7 @@ COMMANDS = {
     "predict": cmd_predict,
     "eval": cmd_eval,
     "chart": cmd_chart,
+    "doctor": cmd_doctor,
     "demo": cmd_demo,
     "names": cmd_names,
 }

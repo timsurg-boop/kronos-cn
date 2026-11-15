@@ -45,6 +45,7 @@ kronos-cn demo --open
 export TUSHARE_TOKEN=...          # 仅 Tushare 兜底时需要
 kronos-cn fetch 600519            # 默认存到 ~/.kronos/data/600519_kronos.csv
 kronos-cn validate                # 体检
+kronos-cn doctor                  # 看数据新鲜度
 kronos-cn heatmap --open          # 出图
 ```
 
@@ -65,10 +66,12 @@ kronos-cn heatmap --open          # 出图
 |------|------|
 | `kronos-cn demo` | 用 `examples/data` 生成样例云图 |
 | `kronos-cn validate` | 数据质量体检 |
+| `kronos-cn doctor` | 数据新鲜度报告（stale / short / broken） |
 | `kronos-cn heatmap` | 生成市场云图（`--metric wk/mo/qtd/ytd`，`--scheme cn/intl`） |
 | `kronos-cn chart CODE` | 生成日/周/月 K 线三联图（`--period D W M`，默认自动打开） |
 | `kronos-cn dividend` | 用红利表生成红利热力图 |
 | `kronos-cn fetch CODE` | 抓取单只标的（Akshare 优先，Tushare 兜底） |
+| `kronos-cn fetch --all` | 刷新目录内全部缓存，保留各自最早日期 |
 | `kronos-cn predict CODE --plot` | 调用 Kronos 预测并画图（需要权重） |
 | `kronos-cn eval` | 滚动 RankIC 评测 |
 | `kronos-cn names --refresh` | 从 Akshare 重建本地代码名称表 |

@@ -38,7 +38,12 @@ PERIODS = {"D": None, "W": "W-FRI", "M": "ME", "Q": "QE", "Y": "YE"}
 
 def normalize(frame: pd.DataFrame) -> pd.DataFrame:
     """Rename provider columns, coerce types, sort and de-duplicate."""
-    frame = frame.rename(columns={k: v for k, v in RENAME.items() if k in frame.columns})
+    rename_map = {
+        source: target
+        for source, target in RENAME.items()
+        if source in frame.columns and target not in frame.columns
+    }
+    frame = frame.rename(columns=rename_map)
     missing = [c for c in REQUIRED_COLUMNS if c not in frame.columns]
     if missing:
         raise ValueError("missing columns: " + ", ".join(missing))
