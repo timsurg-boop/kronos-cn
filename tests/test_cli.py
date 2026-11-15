@@ -30,7 +30,8 @@ def test_heatmap_explicit(tmp_path):
     assert "selected" in html
 
 
-def test_chart_writes_png(tmp_path):    out = tmp_path / "600519.png"
+def test_chart_writes_png(tmp_path):
+    out = tmp_path / "600519.png"
     code = main(
         [
             "chart",
