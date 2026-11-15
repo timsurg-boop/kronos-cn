@@ -34,6 +34,16 @@ def _akshare_a_share(code: str, start: str, end: str) -> pd.DataFrame:
     return normalize(frame)
 
 
+def _akshare_etf(code: str, start: str, end: str) -> pd.DataFrame:
+    import akshare as ak
+
+    symbol = ("sh" if market_suffix(code) == ".SH" else "sz") + code
+    frame = ak.fund_etf_hist_sina(symbol=symbol)
+    frame["date"] = pd.to_datetime(frame["date"])
+    frame = frame[(frame["date"] >= pd.Timestamp(start)) & (frame["date"] <= pd.Timestamp(end))]
+    return normalize(frame)
+
+
 def _akshare_a_share_weekly(code: str, start: str, end: str) -> pd.DataFrame:
     import akshare as ak
 
@@ -62,6 +72,8 @@ def _akshare_us(ticker: str, start: str, end: str) -> pd.DataFrame:
     frame = frame.rename(columns={"date": "date"})
     frame["date"] = pd.to_datetime(frame["date"])
     frame = frame[(frame["date"] >= pd.Timestamp(start)) & (frame["date"] <= pd.Timestamp(end))]
+    if "amount" not in frame.columns:
+        frame["amount"] = frame["volume"] * frame["close"]
     return normalize(frame)
 
 
@@ -98,13 +110,13 @@ def fetch(
     errors: list[str] = []
 
     if is_a_share(code):
-        attempts = [
-            ("akshare", lambda: (
-                _akshare_a_share_weekly(code, start_s, end_s)
-                if freq in ("W", "ME")
-                else _akshare_a_share(code, start_s, end_s)
-            )),
-        ]
+        if freq in ("W", "ME"):
+            attempts = [("akshare", lambda: _akshare_a_share_weekly(code, start_s, end_s))]
+        else:
+            attempts = [
+                ("akshare", lambda: _akshare_a_share(code, start_s, end_s)),
+                ("akshare-etf", lambda: _akshare_etf(code, start_s, end_s)),
+            ]
         if settings.tushare_token:
             attempts.append(
                 ("tushare", lambda: _tushare(code, start_s, end_s, settings.tushare_token, freq))

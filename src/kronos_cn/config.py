@@ -96,6 +96,9 @@ class Settings:
 def normalize_code(code: str) -> str:
     """Strip exchange suffixes and whitespace; keep the ``USA`` convention."""
     code = str(code).strip().upper()
+    for prefix in ("SH", "SZ", "BJ"):
+        if code.startswith(prefix) and code[len(prefix):].isdigit():
+            return code[len(prefix):]
     for suffix in (".SH", ".SZ", ".BJ"):
         if code.endswith(suffix):
             return code[: -len(suffix)]
@@ -110,9 +113,9 @@ def is_a_share(code: str) -> bool:
 def market_suffix(code: str) -> str:
     """Return the Tushare-style exchange suffix for an A-share code."""
     code = normalize_code(code)
-    if code.startswith(("600", "601", "603", "605", "688", "689", "900")):
+    if code.startswith(("5", "6", "9")):
         return ".SH"
-    if code.startswith(("000", "001", "002", "003", "300", "301", "200")):
+    if code.startswith(("0", "1", "2", "3")):
         return ".SZ"
     if code.startswith(("4", "8")):
         return ".BJ"
